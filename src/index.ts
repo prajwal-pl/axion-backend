@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 
 import DashboardRoute from "./routes/dashboard.route";
+import WorkspaceRoute from "./routes/workspace.route";
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use(cors());
 
 app.use("/api/dashboard", DashboardRoute);
+app.use("/api/workspace", WorkspaceRoute);
 
 app.get("/", (req, res) => {
   res.send("Hello World");
