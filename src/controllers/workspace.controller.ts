@@ -70,12 +70,10 @@ export const ChatFunction: RequestHandler = async (req, res) => {
           content: getSystemPrompt(),
         },
       ],
-      stream: true,
     });
-    for await (const chunk of completion) {
-      console.log(chunk.choices[0].delta.content || "");
-    }
-    res.json({ message: "Success" });
+    const response = completion.choices[0].message.content || "";
+
+    res.json({ response });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: "Internal Server Error" });
