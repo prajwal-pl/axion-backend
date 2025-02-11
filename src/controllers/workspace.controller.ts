@@ -25,7 +25,6 @@ export const TemplateFunction: RequestHandler = async (req, res) => {
       model: "llama-3.3-70b-versatile",
     });
     const response = completion?.choices[0]?.message?.content || "";
-    console.log(response);
     if (response.includes("react")) {
       res.json({
         prompts: [
@@ -55,11 +54,17 @@ export const TemplateFunction: RequestHandler = async (req, res) => {
 };
 
 export const ChatFunction: RequestHandler = async (req, res) => {
+  // Set headers for SSE
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
   const { prompts } = req.body;
   const promptData = prompts.map((prompt: string) => ({
     role: "user",
     content: prompt,
   }));
+
   try {
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
@@ -70,12 +75,28 @@ export const ChatFunction: RequestHandler = async (req, res) => {
           content: getSystemPrompt(),
         },
       ],
+      stream: true,
     });
-    const response = completion.choices[0].message.content || "";
 
-    res.json({ response });
+    // Stream each chunk as an SSE event
+    for await (const message of completion) {
+      const content = message.choices[0]?.delta?.content || "";
+      console.log(content);
+      // Format the data as an SSE event
+      res.write(`data: ${JSON.stringify({ content })}\n\n`);
+    }
+
+    // Send an event to indicate the stream is complete
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+
+    // TODO: Add the response to the database
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error(error);
+    // Send error event
+    res.write(
+      `data: ${JSON.stringify({ error: "Internal Server Error" })}\n\n`
+    );
+  } finally {
+    res.end();
   }
 };
